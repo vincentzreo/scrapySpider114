@@ -70,7 +70,10 @@ class JobboleSpider(scrapy.Spider):
             article_item["content"] = content
             article_item["tags"] = tags
             article_item["url"] = response.url
-            article_item["front_image_url"] = [response.meta.get("front_image_url","")]
+            if response.meta.get("front_image_url",""):
+                article_item["front_image_url"] = [response.meta.get("front_image_url","")]
+            else:
+                article_item["front_image_url"] = []
             yield Request(url=parse.urljoin(response.url, "/NewsAjax/GetAjaxNewsInfo?contentId={}".format(post_id)),meta={"article_item":article_item}, callback=self.parse_nums)
             # praise_nums = j_data["DiggCount"]
             # fav_nums = j_data["TotalView"]
