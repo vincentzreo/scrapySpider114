@@ -26,7 +26,7 @@ class JobboleSpider(scrapy.Spider):
         # url = response.xpath('//div[@id="news_list"]//h2[@class="news_entry"]/a/@href').extract_first()
         # urls = response.css('div#news_list h2 a::attr(href)').extract()
 
-        post_nodes = response.css('div#news_list div.news_block')[:1]
+        post_nodes = response.css('div#news_list div.news_block')[7:8]
         for post_node in post_nodes:
             image_url = post_node.css('.entry_summary a img::attr(src)').extract_first("")
             post_url = post_node.css('h2 a::attr(href)').extract_first("")

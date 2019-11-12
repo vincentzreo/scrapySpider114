@@ -72,7 +72,9 @@ ROBOTSTXT_OBEY = False
 ITEM_PIPELINES = {
    'spider.pipelines.SpiderPipeline': 300,
     'spider.pipelines.ImagePipeline': 1,
-    'spider.pipelines.JsonWithEncodingPipeline':2
+    'spider.pipelines.JsonWithEncodingPipeline':2,
+    'spider.pipelines.JsonExporterPipeline':3,
+    'spider.pipelines.MysqlPipeline':4
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
