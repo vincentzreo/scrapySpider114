@@ -6,6 +6,8 @@ from scrapy import Request
 from urllib import parse
 import requests
 import re
+from scrapy.loader import ItemLoader
+from spider.items import ArticleItemLoader
 from ..items import JobboleArticleItem
 from ..utils.common import get_md5
 import json
@@ -26,7 +28,7 @@ class JobboleSpider(scrapy.Spider):
         # url = response.xpath('//div[@id="news_list"]//h2[@class="news_entry"]/a/@href').extract_first()
         # urls = response.css('div#news_list h2 a::attr(href)').extract()
 
-        post_nodes = response.css('div#news_list div.news_block')[6:7]
+        post_nodes = response.css('div#news_list div.news_block')[0:1]
         for post_node in post_nodes:
             image_url = post_node.css('.entry_summary a img::attr(src)').extract_first("")
             post_url = post_node.css('h2 a::attr(href)').extract_first("")
@@ -48,33 +50,45 @@ class JobboleSpider(scrapy.Spider):
     def parse_detail(self, response):
         match_re = re.match(".*?(\d+)",response.url)
         if match_re:
-            article_item = JobboleArticleItem()
-            # title = response.css('#news_title a::text').extract_first("")
-            title = response.xpath('//*[@id="news_title"]//a/text()').extract_first("")
-            # create_time = response.css('#news_info .time::text').extract_first("")
-            create_time = response.xpath('//*[@id="news_info"]//*[@class="time"]/text()').extract_first()
-            match_re1 = re.match(".*?(\d+.*)",create_time)
-            if match_re1:
-                create_time = match_re1.group(1)
-            # content = response.css('#news_content').extract()[0]
-            content = response.xpath('//*[@id="news_content"]').extract()[0]
-            # tag_list = response.css('.news_tags a::text').extract()
-            tag_list = response.xpath('//*[@class="news_tags"]//a/text()').extract()
-            tags = ','.join(tag_list)
             post_id = match_re.group(1)
-            #第二个url如果之前不加/,则会添加到第一个url的子路径下，而非域名后
-            # html = requests.get(url=parse.urljoin(response.url, "/NewsAjax/GetAjaxNewsInfo?contentId={}".format(post_id)))
-            # j_data = json.loads(html.text)
-            article_item["title"] = title
-            article_item["create_time"] = create_time
-            article_item["content"] = content
-            article_item["tags"] = tags
-            article_item["url"] = response.url
-            if response.meta.get("front_image_url",""):
-                article_item["front_image_url"] = [response.meta.get("front_image_url","")]
-            else:
-                article_item["front_image_url"] = []
-            yield Request(url=parse.urljoin(response.url, "/NewsAjax/GetAjaxNewsInfo?contentId={}".format(post_id)),meta={"article_item":article_item}, callback=self.parse_nums)
+            # article_item = JobboleArticleItem()
+            # # title = response.css('#news_title a::text').extract_first("")
+            # title = response.xpath('//*[@id="news_title"]//a/text()').extract_first("")
+            # # create_time = response.css('#news_info .time::text').extract_first("")
+            # create_time = response.xpath('//*[@id="news_info"]//*[@class="time"]/text()').extract_first()
+            # match_re1 = re.match(".*?(\d+.*)",create_time)
+            # if match_re1:
+            #     create_time = match_re1.group(1)
+            # # content = response.css('#news_content').extract()[0]
+            # content = response.xpath('//*[@id="news_content"]').extract()[0]
+            # # tag_list = response.css('.news_tags a::text').extract()
+            # tag_list = response.xpath('//*[@class="news_tags"]//a/text()').extract()
+            # tags = ','.join(tag_list)
+            #
+            # #第二个url如果之前不加/,则会添加到第一个url的子路径下，而非域名后
+            # # html = requests.get(url=parse.urljoin(response.url, "/NewsAjax/GetAjaxNewsInfo?contentId={}".format(post_id)))
+            # # j_data = json.loads(html.text)
+            # article_item["title"] = title
+            # article_item["create_time"] = create_time
+            # article_item["content"] = content
+            # article_item["tags"] = tags
+            # article_item["url"] = response.url
+            # if response.meta.get("front_image_url", ""):
+            #     article_item["front_image_url"] = [response.meta.get("front_image_url","")]
+            # else:
+            #     article_item["front_image_url"] = []
+
+            item_loader = ArticleItemLoader(item=JobboleArticleItem(), response=response)
+            item_loader.add_xpath("title", '//*[@id="news_title"]//a/text()')
+            item_loader.add_xpath("content", '//*[@id="news_content"]')
+            item_loader.add_xpath('tags', '//*[@class="news_tags"]//a/text()')
+            item_loader.add_xpath('create_time', '//*[@id="news_info"]//*[@class="time"]/text()')
+            item_loader.add_value("url", response.url)
+            item_loader.add_value("front_image_url", response.meta.get("front_image_url", ""))
+
+            # article_item = item_loader.load_item()
+
+            yield Request(url=parse.urljoin(response.url, "/NewsAjax/GetAjaxNewsInfo?contentId={}".format(post_id)), meta={"article_item": item_loader, "url":response.url}, callback=self.parse_nums)
             # praise_nums = j_data["DiggCount"]
             # fav_nums = j_data["TotalView"]
             # comment_nums = j_data["CommentCount"]
@@ -82,15 +96,20 @@ class JobboleSpider(scrapy.Spider):
 
     def parse_nums(self,response):
         j_data = json.loads(response.text)
-        article_item = response.meta.get("article_item","")
+        item_loader = response.meta.get("article_item", "")
 
         praise_nums = j_data["DiggCount"]
         fav_nums = j_data["TotalView"]
         comment_nums = j_data["CommentCount"]
 
-        article_item['praise_nums'] = praise_nums
-        article_item['fav_nums'] = fav_nums
-        article_item['comment_nums'] = comment_nums
-        article_item['url_object_id'] = get_md5(article_item['url'])
+        item_loader.add_value('praise_nums', j_data["DiggCount"])
+        item_loader.add_value('fav_nums', j_data["TotalView"])
+        item_loader.add_value('comment_nums', j_data["CommentCount"])
+        item_loader.add_value('url_object_id', get_md5(response.meta.get("url","")))
+        # article_item['praise_nums'] = praise_nums
+        # article_item['fav_nums'] = fav_nums
+        # article_item['comment_nums'] = comment_nums
+        # article_item['url_object_id'] = get_md5(article_item['url'])
+        article_item = item_loader.load_item()
         yield article_item
         pass

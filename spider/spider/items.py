@@ -6,6 +6,9 @@
 # https://docs.scrapy.org/en/latest/topics/items.html
 
 import scrapy
+import re
+from scrapy.loader import ItemLoader
+from scrapy.loader.processors import MapCompose, TakeFirst, Identity, Join
 
 
 class SpiderItem(scrapy.Item):
@@ -14,12 +17,37 @@ class SpiderItem(scrapy.Item):
     pass
 
 
+class ArticleItemLoader(ItemLoader):
+    default_output_processor = TakeFirst()
+
+
+def data_convert(value):
+    match_re = re.match(".*?(\d+.*)", value)
+    if match_re:
+        return match_re.group(1)
+    else:
+        return "1970-07-01"
+
+    pass
+
+
+"""
+input_processor是在收集数据的过程中所做的处理，output_processor是数据yield之后进行的处理
+"""
+
 class JobboleArticleItem(scrapy.Item):
-    title = scrapy.Field()
-    create_time = scrapy.Field()
+    title = scrapy.Field(
+        # input_processor=MapCompose(add_jobbole, add_test),
+        # output_processor=TakeFirst()
+    )
+    create_time = scrapy.Field(
+        input_processor=MapCompose(data_convert)
+    )
     url = scrapy.Field()
     url_object_id = scrapy.Field()
-    front_image_url = scrapy.Field()
+    front_image_url = scrapy.Field(
+        output_processor=Identity()
+    )
     front_image_path = scrapy.Field()
     #点赞数
     praise_nums = scrapy.Field()
@@ -27,7 +55,9 @@ class JobboleArticleItem(scrapy.Item):
     comment_nums = scrapy.Field()
     #查看数
     fav_nums = scrapy.Field()
-    tags = scrapy.Field()
+    tags = scrapy.Field(
+        output_processor=Join(separator=",")
+    )
     content = scrapy.Field()
 
     pass

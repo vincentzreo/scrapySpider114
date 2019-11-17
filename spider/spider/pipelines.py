@@ -87,7 +87,7 @@ class MysqlTwistedPipeline(object):
         insert_sql = """
                     insert into jobbole_article(title, url, url_object_id, front_image_url, front_image_path, 
                     praise_nums, comment_nums, fav_nums, tags, content, create_data)
-                    values (%s, %s, %s, %s, %s,%s, %s, %s, %s, %s, %s)
+                    values (%s, %s, %s, %s, %s,%s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE praise_nums=VALUES(praise_nums)
                 """
         params = []
         params.append(item.get("title", ""))
@@ -101,7 +101,7 @@ class MysqlTwistedPipeline(object):
         params.append(item.get("fav_nums", 0))
         params.append(item.get("tags", ""))
         params.append(item.get("content", ""))
-        params.append(item.get("create_data", "1970-07-01"))
+        params.append(item.get("create_time", "1970-07-01"))
 
 
         cursor.execute(insert_sql, tuple(params))
