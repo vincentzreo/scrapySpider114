@@ -74,7 +74,7 @@ ITEM_PIPELINES = {
     'spider.pipelines.ImagePipeline': 1,
     'spider.pipelines.JsonWithEncodingPipeline':2,
     'spider.pipelines.JsonExporterPipeline':3,
-    'spider.pipelines.MysqlPipeline':4
+    'spider.pipelines.MysqlTwistedPipeline':4
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
@@ -103,3 +103,8 @@ from scrapy.cmdline import execute
 IMAGES_URLS_FIELD = 'front_image_url'
 prohect_dir = os.path.dirname(os.path.abspath(__file__))
 IMAGES_STORE = os.path.join(prohect_dir,'images')
+
+MYSQL_HOST = "127.0.0.1"
+MYSQL_DBNAME = "article_spider"
+MYSQL_USER = "root"
+MYSQL_PASSWORD = "root"

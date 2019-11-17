@@ -3,6 +3,7 @@ from scrapy.pipelines.images import ImagesPipeline
 import codecs
 import json
 from scrapy.exporters import JsonItemExporter
+from twisted.enterprise import adbapi
 import MySQLdb
 # Define your item pipelines here
 #
@@ -49,6 +50,62 @@ class MysqlPipeline(object):
         return item
 
     def spider_closed(self,spider):
+        pass
+
+
+class MysqlTwistedPipeline(object):
+    def __init__(self, dbpool):
+        self.dbpool = dbpool
+        pass
+
+    @classmethod
+    def from_settings(cls, settings):
+        from MySQLdb.cursors import DictCursor
+        dbparms = dict(
+            host=settings["MYSQL_HOST"],
+            db=settings["MYSQL_DBNAME"],
+            user=settings["MYSQL_USER"],
+            password=settings["MYSQL_PASSWORD"],
+            charset='utf8',
+            cursorclass=DictCursor,
+            use_unicode=True
+        )
+        dbpool = adbapi.ConnectionPool("MySQLdb", **dbparms)
+        return cls(dbpool)
+        pass
+
+    def process_item(self, item, spider):
+        query = self.dbpool.runInteraction(self.do_insert,item)
+        query.addErrback(self.handle_error, item, spider)
+        pass
+
+    def handle_error(self, failure, item, spider):
+        print(failure)
+        pass
+
+    def do_insert(self, cursor, item):
+        insert_sql = """
+                    insert into jobbole_article(title, url, url_object_id, front_image_url, front_image_path, 
+                    praise_nums, comment_nums, fav_nums, tags, content, create_data)
+                    values (%s, %s, %s, %s, %s,%s, %s, %s, %s, %s, %s)
+                """
+        params = []
+        params.append(item.get("title", ""))
+        params.append(item.get("url", ""))
+        params.append(item.get("url_object_id", ""))
+        front_image = ",".join(item.get("front_image_url", []))
+        params.append(item.get("front_image_url", front_image))
+        params.append(item.get("front_image_path", ""))
+        params.append(item.get("praise_nums", 0))
+        params.append(item.get("comment_nums", 0))
+        params.append(item.get("fav_nums", 0))
+        params.append(item.get("tags", ""))
+        params.append(item.get("content", ""))
+        params.append(item.get("create_data", "1970-07-01"))
+
+
+        cursor.execute(insert_sql, tuple(params))
+
         pass
 
 
