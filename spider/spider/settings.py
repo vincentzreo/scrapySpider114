@@ -102,7 +102,7 @@ from scrapy.cmdline import execute
 
 IMAGES_URLS_FIELD = 'front_image_url'
 prohect_dir = os.path.dirname(os.path.abspath(__file__))
-IMAGES_STORE = os.path.join(prohect_dir,'images')
+IMAGES_STORE = os.path.join(prohect_dir, 'images')
 
 MYSQL_HOST = "127.0.0.1"
 MYSQL_DBNAME = "article_spider"

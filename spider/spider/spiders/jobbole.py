@@ -28,20 +28,22 @@ class JobboleSpider(scrapy.Spider):
         # url = response.xpath('//div[@id="news_list"]//h2[@class="news_entry"]/a/@href').extract_first()
         # urls = response.css('div#news_list h2 a::attr(href)').extract()
 
-        post_nodes = response.css('div#news_list div.news_block')[0:1]
+        post_nodes = response.css('div#news_list div.news_block')
         for post_node in post_nodes:
             image_url = post_node.css('.entry_summary a img::attr(src)').extract_first("")
+            if image_url.startswith("//"):
+                image_url = "https:" + image_url
             post_url = post_node.css('h2 a::attr(href)').extract_first("")
             yield Request(url=parse.urljoin(response.url,post_url),meta={"front_image_url":image_url},callback=self.parse_detail)
 
 
-        #提取下一页并交给scrapy进行处理
+        # 提取下一页并交给scrapy进行处理
         # next_url = response.css('div.pager a:last-child::text').extract_first("")
-
-        # next_url = response.xpath('//a[contains(text(),"Next >")]/@href').extract_first("")
+        #
+        next_url = response.xpath('//a[contains(text(),"Next >")]/@href').extract_first("")
         # next_url = response.css('div.pager a:last-child::attr(href)').extract_first("")
-        # yield Request(url=parse.urljoin(response.url, next_url),callback=self.parse)
-
+        yield Request(url=parse.urljoin(response.url, next_url), callback=self.parse)
+        #
         # if next_url == "Next >":
         #     next_url = response.css('div.pager a:last-child::attr(href)').extract_first("")
         #     yield Request(url=parse.urljoin(response.url, next_url))
@@ -84,7 +86,8 @@ class JobboleSpider(scrapy.Spider):
             item_loader.add_xpath('tags', '//*[@class="news_tags"]//a/text()')
             item_loader.add_xpath('create_time', '//*[@id="news_info"]//*[@class="time"]/text()')
             item_loader.add_value("url", response.url)
-            item_loader.add_value("front_image_url", response.meta.get("front_image_url", ""))
+            if response.meta.get("front_image_url", ""):
+                item_loader.add_value("front_image_url", response.meta.get("front_image_url", ""))
 
             # article_item = item_loader.load_item()
 
@@ -94,7 +97,7 @@ class JobboleSpider(scrapy.Spider):
             # comment_nums = j_data["CommentCount"]
         pass
 
-    def parse_nums(self,response):
+    def parse_nums(self, response):
         j_data = json.loads(response.text)
         item_loader = response.meta.get("article_item", "")
 
@@ -105,7 +108,7 @@ class JobboleSpider(scrapy.Spider):
         item_loader.add_value('praise_nums', j_data["DiggCount"])
         item_loader.add_value('fav_nums', j_data["TotalView"])
         item_loader.add_value('comment_nums', j_data["CommentCount"])
-        item_loader.add_value('url_object_id', get_md5(response.meta.get("url","")))
+        item_loader.add_value('url_object_id', get_md5(response.meta.get("url", "")))
         # article_item['praise_nums'] = praise_nums
         # article_item['fav_nums'] = fav_nums
         # article_item['comment_nums'] = comment_nums
